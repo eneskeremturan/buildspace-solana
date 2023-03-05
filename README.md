@@ -21,7 +21,7 @@ Collection Mint:  https://explorer.solana.com/address/2geZak3aaTXiyGd8kk9zUg3BNa
 <img width="1427" alt="Screenshot 2023-03-05 at 11 56 25" src="https://user-images.githubusercontent.com/50349426/222951840-6dfdf279-0cf6-4f8b-8f02-4f4ef3e9dd16.png">
 
 
-#### for SOLANA Program
+#### For SOLANA Program
 
 ```
 https://github.com/enyares/soluckyfighters
