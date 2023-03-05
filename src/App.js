@@ -1,7 +1,7 @@
 import "./App.css";
 import React, { useEffect, useState } from "react";
 import { Connection, PublicKey, clusterApiUrl } from "@solana/web3.js";
-import { Program, AnchorProvider, web3 } from "@project-serum/anchor";
+import { Program, AnchorProvider, web3, BN } from "@project-serum/anchor";
 import { Buffer } from "buffer";
 import kp from "./keypair.json";
 import { Button, Grid, Paper, Typography } from "@mui/material";
@@ -15,7 +15,6 @@ import winner from "../src/assets/121212.png";
 import back3 from "../src/assets/back3.png";
 import backbut from "../src/assets/123123.png";
 
-import Header from "./components/Header";
 import { Box, height } from "@mui/system";
 
 window.Buffer = Buffer;
@@ -28,7 +27,7 @@ const arr = Object.values(kp._keypair.secretKey);
 const secret = new Uint8Array(arr);
 const baseAccount = web3.Keypair.fromSecretKey(secret);
 // This is the address of your solana program, if you forgot, just run solana address -k target/deploy/myepicproject-keypair.json
-const programID = new PublicKey("CJ9gp6GkxwseDmEQ1fA5BLN2frsciAzUC5TtQvU4idwf");
+const programID = new PublicKey("FcGD1W1PZKQ5NRpNRZuPYYwGkCFsia1hdPtudAkMa458");
 
 // Set our network to devnet.
 const network = clusterApiUrl("devnet");
@@ -48,7 +47,6 @@ const TEST_GIFS = [
 ];
 const App = () => {
   const [walletAddress, setWalletAddress] = useState(null);
-  const [inputValue, setInputValue] = useState("");
   const [gifList, setGifList] = useState([]);
   const [fight, setFight] = useState(false);
   const [warrior, setWarrior] = useState(1);
@@ -67,14 +65,6 @@ const App = () => {
   const kosma2 =
     "https://gamerarenamobile.s3.eu-central-1.amazonaws.com/gamePics/kaptan-disko-(2).gif";
 
-  const renderNotConnectedContainer = () => (
-    <button
-      className="cta-button connect-wallet-button"
-      onClick={connectWallet}
-    >
-      Connect to Wallet
-    </button>
-  );
   const getProvider = () => {
     const connection = new Connection(network, opts.preflightCommitment);
     const provider = new AnchorProvider(
@@ -82,15 +72,17 @@ const App = () => {
       window.solana,
       opts.preflightCommitment
     );
+    console.log("provi", provider);
     return provider;
   };
   const getProgram = async () => {
     // Get metadata about your solana program
     const idl = await Program.fetchIdl(programID, getProvider());
     // Create a program that you can call
+    console.log("ii", idl);
     return new Program(idl, programID, getProvider());
   };
-  const getGifList = async () => {
+  const getUserList = async () => {
     try {
       const program = await getProgram();
       const account = await program.account.baseAccount.fetch(
@@ -98,16 +90,13 @@ const App = () => {
       );
 
       console.log("Got the account", account);
-      setGifList(account.gifList);
+      setGifList(account.userList); // userlist = Aktif duello, totalusers = her zaman tek sayı, scorelist = winner loser, totalduel
     } catch (error) {
-      console.log("Error in getGifList: ", error);
+      console.log("Error in getUserList: ", error);
       setGifList(null);
     }
   };
-  const onInputChange = (event) => {
-    const { value } = event.target;
-    setInputValue(value);
-  };
+
   const connectWallet = async () => {
     const { solana } = window;
 
@@ -118,25 +107,18 @@ const App = () => {
     }
   };
   const sendGif = async () => {
-    if (inputValue.length === 0) {
-      console.log("No gif link given!");
-      return;
-    }
-    setInputValue("");
-    console.log("Gif link:", inputValue);
     try {
       const provider = getProvider();
       const program = await getProgram();
 
-      await program.rpc.addGif(inputValue, "another value", {
+      await program.rpc.addPlayer("another value", {
         accounts: {
           baseAccount: baseAccount.publicKey,
           user: provider.wallet.publicKey,
         },
       });
-      console.log("GIF successfully sent to program", inputValue);
 
-      await getGifList();
+      await getUserList();
     } catch (error) {
       console.log("Error sending GIF:", error);
     }
@@ -159,7 +141,7 @@ const App = () => {
         "Created a new BaseAccount w/ address:",
         baseAccount.publicKey.toString()
       );
-      await getGifList();
+      await getUserList();
     } catch (error) {
       console.log("Error creating BaseAccount account:", error);
     }
@@ -176,53 +158,7 @@ const App = () => {
       alert("Solana object not found! Get a Phantom Wallet 👻");
     }
   };
-  const renderConnectedContainer = () => {
-    // If we hit this, it means the program account hasn't been initialized.
-    if (gifList === null) {
-      return (
-        <div className="connected-container">
-          <button
-            className="cta-button submit-gif-button"
-            onClick={createGifAccount}
-          >
-            Do One-Time Initialization For GIF Program Account
-          </button>
-        </div>
-      );
-    }
-    // Otherwise, we're good! Account exists. User can submit GIFs.
-    else {
-      return (
-        <div>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              sendGif();
-            }}
-          >
-            <input
-              type="text"
-              placeholder="Enter gif link!"
-              value={inputValue}
-              onChange={onInputChange}
-            />
-            <button type="submit" className="cta-button submit-gif-button">
-              Submit
-            </button>
-          </form>
-          <div className="gif-grid">
-            {/* We use index as the key instead, also, the src is now item.gifLink */}
-            {gifList.map((item, index) => (
-              <div className="gif-item" key={index}>
-                <img className="img" src={item.gifLink} />
-                <p className="sub-text-small">{item.userAddress.toString()}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-  };
+
   useEffect(() => {
     const onLoad = async () => {
       await checkIfWalletIsConnected();
@@ -230,22 +166,23 @@ const App = () => {
     window.addEventListener("load", onLoad);
     return () => window.removeEventListener("load", onLoad);
   }, []);
-  useEffect(() => {
-    if (walletAddress) {
-      console.log("Fetching GIF list...");
+  // useEffect(() => {
+  //   if (walletAddress) {
+  //     console.log("Fetching GIF list...");
 
-      // Call Solana program here.
-      getGifList();
-      // Set state
-      //setGifList(TEST_GIFS);
-    }
-  }, [walletAddress]);
+  //     // Call Solana program here.
+  //     getUserList();
+  //     // Set state
+  //     //setGifList(TEST_GIFS);
+  //   }
+  // }, [walletAddress]);
   useEffect(() => {
     if (warrior !== 4) {
       setTimeout(() => {
         setWarrior((prev) => prev + 1);
       }, 5000);
     }
+    console.log("giflist", gifList);
   }, [warrior]);
 
   return (
@@ -259,314 +196,332 @@ const App = () => {
         border: "1px solid black",
       }}
     >
-      {walletAddress ? (
-        <Grid container display="flex" height="100vh">
-          {fight ? (
-            <>
-              {/* --------------------1. USER ------------------------ */}
-              <Grid
-                item
-                xs={6}
-                alignItems="center"
-                display="center"
-                justifyContent="end"
-              >
-                {warrior === 4 && (
+      {gifList === null ? (
+        <div className="connected-container">
+          <button
+            className="cta-button submit-gif-button"
+            onClick={createGifAccount}
+          >
+            Do One-Time Initialization For GIF Program Account
+          </button>
+        </div>
+      ) : (
+        <>
+          {walletAddress ? (
+            <Grid container display="flex" height="100vh">
+              {fight ? (
+                <>
+                  {/* --------------------1. USER ------------------------ */}
                   <Grid
-                    style={{
-                      paddingRight: "200px",
-                      position: "absolute",
-                      bottom: 88,
-                    }}
+                    item
+                    xs={6}
+                    alignItems="center"
+                    display="center"
+                    justifyContent="end"
                   >
-                    <Box
-                      sx={{
-                        backgroundImage: `url(${winner})`,
-                        width: "360px",
-                        height: "116px",
-                      }}
-                    />
-                    <Box
-                      sx={{
-                        backgroundImage: `url(${idlemor})`,
-                        width: "140px",
-                        height: "120px",
-                        webkitTransform: "scaleX(-1)",
-                        transform: "scaleX(-1)",
-                      }}
-                    />
+                    {warrior === 4 && (
+                      <Grid
+                        style={{
+                          paddingRight: "200px",
+                          position: "absolute",
+                          bottom: 88,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundImage: `url(${winner})`,
+                            width: "360px",
+                            height: "116px",
+                          }}
+                        />
+                        <Box
+                          sx={{
+                            backgroundImage: `url(${idlemor})`,
+                            width: "140px",
+                            height: "120px",
+                            webkitTransform: "scaleX(-1)",
+                            transform: "scaleX(-1)",
+                          }}
+                        />
+                      </Grid>
+                    )}
+                    {warrior === 1 && (
+                      <Grid
+                        style={{
+                          paddingRight: "200px",
+                          position: "absolute",
+                          bottom: 88,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundImage: `url(${idlemor})`,
+                            width: "140px",
+                            height: "120px",
+                            webkitTransform: "scaleX(-1)",
+                            transform: "scaleX(-1)",
+                          }}
+                        />
+                      </Grid>
+                    )}
+                    {warrior === 2 && (
+                      <Grid
+                        style={{
+                          paddingRight: "200px",
+                          position: "absolute",
+                          bottom: 88,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundImage: `url(${kosma})`,
+                            width: "81px",
+                            height: "75px",
+                            webkitTransform: "scaleX(-1)",
+                            transform: "scaleX(-1)",
+                            position: "relative",
+                            animationName: "example1",
+                            animationDuration: "5s",
+                            animationDirection: "alternate",
+                            "@keyframes example1": {
+                              "0%": { left: "0px" },
+                              "5%": { left: "10px" },
+                              "10%": { left: "20px" },
+                              "15%": { left: "30px" },
+                              "20%": { left: "40px" },
+                              "25%": { left: "50px" },
+                              "30%": { left: "60px" },
+                              "35%": { left: "70px" },
+                              "40%": { left: "80px" },
+                              "45%": { left: "90px" },
+                              "50%": { left: "100px" },
+                              "55%": { left: "110px" },
+                              "60%": { left: "120px" },
+                              "65%": { left: "130px" },
+                              "70%": { left: "140px" },
+                              "75%": { left: "150px" },
+                              "80%": { left: "160px" },
+                              "85%": { left: "170px" },
+                              "90%": { left: "180px" },
+                              "95%": { left: "190px" },
+                              "100%": { left: "200px" },
+                            },
+                          }}
+                        />
+                      </Grid>
+                    )}
+                    {warrior === 3 && (
+                      <Box
+                        sx={{
+                          backgroundImage: `url(${atack})`,
+                          width: "103px",
+                          height: "80px",
+                          webkitTransform: "scaleX(-1)",
+                          transform: "scaleX(-1)",
+                          position: "absolute",
+                          bottom: 88,
+                        }}
+                      />
+                    )}
                   </Grid>
-                )}
-                {warrior === 1 && (
+                  {/* -------------------------------------------- */}
+                  {/* ---------------2. USER----------------------------- */}
                   <Grid
-                    style={{
-                      paddingRight: "200px",
-                      position: "absolute",
-                      bottom: 88,
-                    }}
+                    item
+                    xs={6}
+                    alignItems="center"
+                    display="center"
+                    justifyContent="start"
                   >
-                    <Box
-                      sx={{
-                        backgroundImage: `url(${idlemor})`,
-                        width: "140px",
-                        height: "120px",
-                        webkitTransform: "scaleX(-1)",
-                        transform: "scaleX(-1)",
-                      }}
-                    />
-                  </Grid>
-                )}
-                {warrior === 2 && (
-                  <Grid
-                    style={{
-                      paddingRight: "200px",
-                      position: "absolute",
-                      bottom: 88,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        backgroundImage: `url(${kosma})`,
-                        width: "81px",
-                        height: "75px",
-                        webkitTransform: "scaleX(-1)",
-                        transform: "scaleX(-1)",
-                        position: "relative",
-                        animationName: "example1",
-                        animationDuration: "5s",
-                        animationDirection: "alternate",
-                        "@keyframes example1": {
-                          "0%": { left: "0px" },
-                          "5%": { left: "10px" },
-                          "10%": { left: "20px" },
-                          "15%": { left: "30px" },
-                          "20%": { left: "40px" },
-                          "25%": { left: "50px" },
-                          "30%": { left: "60px" },
-                          "35%": { left: "70px" },
-                          "40%": { left: "80px" },
-                          "45%": { left: "90px" },
-                          "50%": { left: "100px" },
-                          "55%": { left: "110px" },
-                          "60%": { left: "120px" },
-                          "65%": { left: "130px" },
-                          "70%": { left: "140px" },
-                          "75%": { left: "150px" },
-                          "80%": { left: "160px" },
-                          "85%": { left: "170px" },
-                          "90%": { left: "180px" },
-                          "95%": { left: "190px" },
-                          "100%": { left: "200px" },
-                        },
-                      }}
-                    />
-                  </Grid>
-                )}
-                {warrior === 3 && (
-                  <Box
-                    sx={{
-                      backgroundImage: `url(${atack})`,
-                      width: "103px",
-                      height: "80px",
-                      webkitTransform: "scaleX(-1)",
-                      transform: "scaleX(-1)",
-                      position: "absolute",
-                      bottom: 88,
-                    }}
-                  />
-                )}
-              </Grid>
-              {/* -------------------------------------------- */}
-              {/* ---------------2. USER----------------------------- */}
-              <Grid
-                item
-                xs={6}
-                alignItems="center"
-                display="center"
-                justifyContent="start"
-              >
-                {warrior === 4 && (
-                  <Grid
-                    style={{
-                      paddingRight: "200px",
-                      position: "absolute",
-                      bottom: 88,
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        backgroundImage: `url(${winner})`,
-                        width: "360px",
-                        height: "116px",
-                      }}
-                    />
-                    <img src={idlemors} alt="Atack" />
-                  </Grid>
-                )}
-                {warrior === 1 && (
-                  <Grid
-                    style={{
-                      paddingLeft: "200px",
-                      position: "absolute",
-                      bottom: 88,
-                    }}
-                  >
-                    <img src={idlemors} alt="Atack" />
-                    {/* <Box
+                    {warrior === 5 && (
+                      <Grid
+                        style={{
+                          paddingRight: "200px",
+                          position: "absolute",
+                          bottom: 88,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundImage: `url(${winner})`,
+                            width: "360px",
+                            height: "116px",
+                          }}
+                        />
+                        <img src={idlemors} alt="Atack" />
+                      </Grid>
+                    )}
+                    {warrior === 1 && (
+                      <Grid
+                        style={{
+                          paddingLeft: "200px",
+                          position: "absolute",
+                          bottom: 88,
+                        }}
+                      >
+                        <img src={idlemors} alt="Atack" />
+                        {/* <Box
                       sx={{
                         backgroundImage: `url(${idlemors})`,
                         width: "99px",
                         height: "60px",
                       }}
                     /> */}
+                      </Grid>
+                    )}
+                    {warrior === 2 && (
+                      <Grid
+                        style={{
+                          paddingLeft: "200px",
+                          position: "absolute",
+                          bottom: 88,
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundImage: `url(${kosma2})`,
+                            width: "60px",
+                            height: "62px",
+                            position: "relative",
+                            animationName: "example",
+                            animationDuration: "5s",
+                            // animationIterationCount: 1,
+                            animationDirection: "alternate",
+                            "@keyframes example": {
+                              "0%": { right: "0px" },
+                              "5%": { right: "10px" },
+                              "10%": { right: "20px" },
+                              "15%": { right: "30px" },
+                              "20%": { right: "40px" },
+                              "25%": { right: "50px" },
+                              "30%": { right: "60px" },
+                              "35%": { right: "70px" },
+                              "40%": { right: "80px" },
+                              "45%": { right: "90px" },
+                              "50%": { right: "100px" },
+                              "55%": { right: "110px" },
+                              "60%": { right: "120px" },
+                              "65%": { right: "130px" },
+                              "70%": { right: "140px" },
+                              "75%": { right: "150px" },
+                              "80%": { right: "160px" },
+                              "85%": { right: "170px" },
+                              "90%": { right: "180px" },
+                              "95%": { right: "190px" },
+                              "100%": { right: "200px" },
+                            },
+                          }}
+                        />
+                        <img
+                          src={kosma2}
+                          alt="Atack"
+                          style={{
+                            backgroundImage: `url(${kosma2})`,
+                            width: "60px",
+                            height: "62px",
+                            position: "relative",
+                            animationName: "example",
+                            animationDuration: "5s",
+                            // animationIterationCount: 1,
+                            animationDirection: "alternate",
+                            "@keyframes example": {
+                              "0%": { right: "0px" },
+                              "5%": { right: "10px" },
+                              "10%": { right: "20px" },
+                              "15%": { right: "30px" },
+                              "20%": { right: "40px" },
+                              "25%": { right: "50px" },
+                              "30%": { right: "60px" },
+                              "35%": { right: "70px" },
+                              "40%": { right: "80px" },
+                              "45%": { right: "90px" },
+                              "50%": { right: "100px" },
+                              "55%": { right: "110px" },
+                              "60%": { right: "120px" },
+                              "65%": { right: "130px" },
+                              "70%": { right: "140px" },
+                              "75%": { right: "150px" },
+                              "80%": { right: "160px" },
+                              "85%": { right: "170px" },
+                              "90%": { right: "180px" },
+                              "95%": { right: "190px" },
+                              "100%": { right: "200px" },
+                            },
+                          }}
+                        />
+                      </Grid>
+                    )}
+                    {warrior === 3 && (
+                      <Box
+                        sx={{
+                          backgroundImage: `url(${atack2})`,
+                          width: "120px",
+                          height: "60px",
+                          position: "absolute",
+                          bottom: 88,
+                        }}
+                      />
+                    )}
                   </Grid>
-                )}
-                {warrior === 2 && (
+                  {/* -------------------------------------------- */}
+                </>
+              ) : (
+                <>
                   <Grid
-                    style={{
-                      paddingLeft: "200px",
-                      position: "absolute",
-                      bottom: 88,
-                    }}
+                    item
+                    xs={12}
+                    justifyContent="center"
+                    alignItems="center"
+                    display="center"
                   >
-                    <Box
-                      sx={{
-                        backgroundImage: `url(${kosma2})`,
-                        width: "60px",
-                        height: "62px",
-                        position: "relative",
-                        animationName: "example",
-                        animationDuration: "5s",
-                        // animationIterationCount: 1,
-                        animationDirection: "alternate",
-                        "@keyframes example": {
-                          "0%": { right: "0px" },
-                          "5%": { right: "10px" },
-                          "10%": { right: "20px" },
-                          "15%": { right: "30px" },
-                          "20%": { right: "40px" },
-                          "25%": { right: "50px" },
-                          "30%": { right: "60px" },
-                          "35%": { right: "70px" },
-                          "40%": { right: "80px" },
-                          "45%": { right: "90px" },
-                          "50%": { right: "100px" },
-                          "55%": { right: "110px" },
-                          "60%": { right: "120px" },
-                          "65%": { right: "130px" },
-                          "70%": { right: "140px" },
-                          "75%": { right: "150px" },
-                          "80%": { right: "160px" },
-                          "85%": { right: "170px" },
-                          "90%": { right: "180px" },
-                          "95%": { right: "190px" },
-                          "100%": { right: "200px" },
-                        },
+                    <Button
+                      onClick={() => {
+                        sendGif();
+                        setFight(true);
                       }}
-                    />
-                    <img
-                      src={kosma2}
-                      alt="Atack"
-                      style={{
-                        backgroundImage: `url(${kosma2})`,
-                        width: "60px",
-                        height: "62px",
-                        position: "relative",
-                        animationName: "example",
-                        animationDuration: "5s",
-                        // animationIterationCount: 1,
-                        animationDirection: "alternate",
-                        "@keyframes example": {
-                          "0%": { right: "0px" },
-                          "5%": { right: "10px" },
-                          "10%": { right: "20px" },
-                          "15%": { right: "30px" },
-                          "20%": { right: "40px" },
-                          "25%": { right: "50px" },
-                          "30%": { right: "60px" },
-                          "35%": { right: "70px" },
-                          "40%": { right: "80px" },
-                          "45%": { right: "90px" },
-                          "50%": { right: "100px" },
-                          "55%": { right: "110px" },
-                          "60%": { right: "120px" },
-                          "65%": { right: "130px" },
-                          "70%": { right: "140px" },
-                          "75%": { right: "150px" },
-                          "80%": { right: "160px" },
-                          "85%": { right: "170px" },
-                          "90%": { right: "180px" },
-                          "95%": { right: "190px" },
-                          "100%": { right: "200px" },
-                        },
-                      }}
-                    />
+                    >
+                      <Box
+                        sx={{
+                          backgroundImage: `url(${fightButton})`,
+                          width: "200px",
+                          height: "200px",
+                        }}
+                      />
+                    </Button>
                   </Grid>
-                )}
-                {warrior === 3 && (
-                  <Box
-                    sx={{
-                      backgroundImage: `url(${atack2})`,
-                      width: "120px",
-                      height: "60px",
-                      position: "absolute",
-                      bottom: 88,
-                    }}
-                  />
-                )}
-              </Grid>
-              {/* -------------------------------------------- */}
-            </>
-          ) : (
-            <>
-              <Grid
-                item
-                xs={12}
-                justifyContent="center"
-                alignItems="center"
-                display="center"
-              >
-                <Button onClick={() => setFight(true)}>
-                  <Box
-                    sx={{
-                      backgroundImage: `url(${fightButton})`,
-                      width: "200px",
-                      height: "200px",
-                    }}
-                  />
-                </Button>
-              </Grid>
-            </>
-          )}
+                </>
+              )}
 
-          {/* {walletAddress && renderConnectedContainer()} */}
-        </Grid>
-      ) : (
-        <Grid
-          container
-          alignItems="center"
-          display="center"
-          justifyContent="center"
-        >
-          <Box
-            sx={{
-              backgroundImage: `url(${back3})`,
-              width: "100%",
-              height: "300px",
-              backgroundSize: "100% 100%",
-            }}
-          />
-          <Button onClick={connectWallet}>
-            <Box
-              sx={{
-                backgroundImage: `url(${backbut})`,
-                width: "460px",
-                height: "164px",
-              }}
-            />
-          </Button>
-          {/* {renderNotConnectedContainer()} */}
-        </Grid>
+              {/* {walletAddress && renderConnectedContainer()} */}
+            </Grid>
+          ) : (
+            <Grid
+              container
+              alignItems="center"
+              display="center"
+              justifyContent="center"
+            >
+              <Box
+                sx={{
+                  backgroundImage: `url(${back3})`,
+                  width: "100%",
+                  height: "300px",
+                  backgroundSize: "100% 100%",
+                }}
+              />
+              <Button onClick={connectWallet}>
+                <Box
+                  sx={{
+                    backgroundImage: `url(${backbut})`,
+                    width: "460px",
+                    height: "164px",
+                  }}
+                />
+              </Button>
+              {/* {renderNotConnectedContainer()} */}
+            </Grid>
+          )}
+        </>
       )}
     </Paper>
   );
