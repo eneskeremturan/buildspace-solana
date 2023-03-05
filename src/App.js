@@ -51,6 +51,8 @@ const App = () => {
   const [fight, setFight] = useState(false);
   const [warrior, setWarrior] = useState(1);
   const [winLose, setWinLose] = useState(0);
+  const [startGame, setStartGame] = useState({});
+  const [pre, setPre] = useState(false);
 
   const atack =
     "https://gamerarenamobile.s3.eu-central-1.amazonaws.com/gamePics/ATACK-Mor-Sakal.gif";
@@ -90,6 +92,7 @@ const App = () => {
       );
 
       console.log("Got the account", account);
+      setStartGame(account);
       setGifList(account.userList); // userlist = Aktif duello, totalusers = her zaman tek sayı, scorelist = winner loser, totalduel
     } catch (error) {
       console.log("Error in getUserList: ", error);
@@ -182,8 +185,14 @@ const App = () => {
         setWarrior((prev) => prev + 1);
       }, 5000);
     }
+    setPre(false);
     console.log("giflist", gifList);
   }, [warrior]);
+
+  useEffect(() => {
+    if (startGame?.userList?.length === 0) setFight(true);
+    console.log("111", startGame);
+  }, [startGame]);
 
   return (
     <Paper
@@ -467,28 +476,47 @@ const App = () => {
                 </>
               ) : (
                 <>
-                  <Grid
-                    item
-                    xs={12}
-                    justifyContent="center"
-                    alignItems="center"
-                    display="center"
-                  >
-                    <Button
-                      onClick={() => {
-                        sendGif();
-                        setFight(true);
+                  {gifList.length > 0 ? (
+                    <Grid
+                      style={{
+                        paddingRight: "200px",
+                        position: "absolute",
+                        bottom: 88,
                       }}
                     >
                       <Box
                         sx={{
-                          backgroundImage: `url(${fightButton})`,
-                          width: "200px",
-                          height: "200px",
+                          backgroundImage: `url(${idlemor})`,
+                          width: "140px",
+                          height: "120px",
+                          webkitTransform: "scaleX(-1)",
+                          transform: "scaleX(-1)",
                         }}
                       />
-                    </Button>
-                  </Grid>
+                    </Grid>
+                  ) : (
+                    <Grid
+                      item
+                      xs={12}
+                      justifyContent="center"
+                      alignItems="center"
+                      display="center"
+                    >
+                      <Button
+                        onClick={() => {
+                          sendGif();
+                        }}
+                      >
+                        <Box
+                          sx={{
+                            backgroundImage: `url(${fightButton})`,
+                            width: "200px",
+                            height: "200px",
+                          }}
+                        />
+                      </Button>
+                    </Grid>
+                  )}
                 </>
               )}
 
