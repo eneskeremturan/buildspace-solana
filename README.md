@@ -1,16 +1,29 @@
-# buildspace Solana GIF Portal Project
+# soLucky Fighters
 
-### **Welcome 👋**
-To get started with this course, clone this repo and follow these commands:
+# NFT
 
-1. Run `npm install` at the root of your directory
-2. Run `npm run start` to start the project
-3. Start coding!
-
-### **What is the .vscode Folder?**
-If you use VSCode to build your app, we included a list of suggested extensions that will help you build this project! Once you open this project in VSCode, you will see a popup asking if you want to download the recommended extensions :).
+## npm start
 
 
+#### For NFT Mint
 
-### **Questions?**
-Have some questions make sure you head over to your [buildspace Dashboard](https://app.buildspace.so/courses/CObd6d35ce-3394-4bd8-977e-cbee82ae07a3) and link your Discord account so you can get access to helpful channels and your instructor!
+```
+Collection Mint:  https://explorer.solana.com/address/2geZak3aaTXiyGd8kk9zUg3BNaW4Cm3euaz5pNoanjMv?cluster=devnet
+
+```
+
+<img width="1433" alt="Screenshot 2023-03-05 at 11 54 58" src="https://user-images.githubusercontent.com/50349426/222951821-b0c967f3-e3de-496c-9916-1317e8e92944.png">
+
+
+<img width="1430" alt="Screenshot 2023-03-05 at 11 55 29" src="https://user-images.githubusercontent.com/50349426/222951832-6fd7406b-b449-435a-99d2-4bd8ed822f39.png">
+
+
+<img width="1427" alt="Screenshot 2023-03-05 at 11 56 25" src="https://user-images.githubusercontent.com/50349426/222951840-6dfdf279-0cf6-4f8b-8f02-4f4ef3e9dd16.png">
+
+
+#### for SOLANA Program
+
+```
+https://github.com/enyares/soluckyfighters
+
+```
